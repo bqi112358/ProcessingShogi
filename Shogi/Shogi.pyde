@@ -9,7 +9,7 @@ def setup():
         wPieces.append(loadImage('w{}.png'.format(i)))
     textSize(20)
     textAlign(CENTER, CENTER)
-    particles = [[random(width), random(height)] for i in range(1000)]
+    particles = [[random(width), random(height)] for i in range(1024)]
     
 def draw():
     background(0)
@@ -22,21 +22,17 @@ def draw():
     if dialog[0]:
         drawDialog()
     if result != None:
-        fill(255, 255, 0)
-        textSize(100)
-        text(['YOU WIN', 'YOU LOSE'][result], width/2, height/2)
-        noLoop()
-        
+        drawResult()
         
 particles = []
 def drawParticles():
     for i, (x, y) in enumerate(particles):
         particles[i][0] += random(-1, 1)
         particles[i][1] += random(3)
-        if y > 1000:
+        if y > height:
             particles[i][1] = 0
-        strokeWeight(random(5))
-        stroke(512*abs(.5-x/width), 512*abs(.5-y/height), 256*i/len(particles))
+        strokeWeight(random(3))
+        stroke(512*abs(.5-x/width), 512*abs(.5-y/height), i/4)
         point(x, y)
         
 def drawBoard():
@@ -46,7 +42,6 @@ def drawBoard():
     rect(540, 130, 100, 350)
     rect(122, 24, 396, 432)
     
-
 def drawPieces():
     for i in range(9):
         for j in range(9):
@@ -65,7 +60,6 @@ def drawPieces():
                 strokeWeight(5)
                 point(131+j*42, 33+i*46)
                 
-
 def drawHands():
     fill(0, 64, 128)
     for piece in range(1, 8):
@@ -76,7 +70,6 @@ def drawHands():
             image(wPieces[piece], 10, 350-piece*50)
             text('x{}'.format(state.hand.count(-piece)), 75, 375-piece*50)
             
-
 def mousePressed():
     global drop, nextI, nextJ, prevI, prevJ
     i = (mouseY-33) // 46
@@ -109,7 +102,6 @@ def mousePressed():
             if move[0]:
                 targets[move[2]][move[3]] = True
             
-
 targets = [[False]*9 for i in range(9)]
 def drawTargets():
     fill(0, 0, 255, 32)
@@ -123,14 +115,12 @@ def drawTargets():
             if targets[i][j]:
                 rect(147+j*42, 51+i*46, 10, 10)
                 
-
 dialog = [None, None]
 def drawDialog():
     rect(dialog[0], dialog[1], 84, 46)
     image(bPieces[state.board[prevI][prevJ]+7], dialog[0], dialog[1])
     image(bPieces[state.board[prevI][prevJ]], dialog[0]+42, dialog[1])
     
-
 state = State()
 legalMoves = state.legal_moves()
 drop = nextI = nextJ = prevI = prevJ = result = None
@@ -148,3 +138,9 @@ def renewState(renew, dr=None, pr=None, ni=None, nj=None, pi=None, pj=None):
                 legalMoves = state.legal_moves()
     drop = nextI = nextJ = prevI = prevJ = dialog[0] = dialog[1] = None
     targets = [[False]*9 for i in range(9)]
+    
+def drawResult():
+    fill(255, 255, 0)
+    textSize(100)
+    text(['YOU WIN', 'YOU LOSE'][result], width/2, height/2)
+    noLoop()
