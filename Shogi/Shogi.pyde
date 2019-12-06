@@ -91,7 +91,7 @@ def mousePressed():
                 prevPiece = state.board[prevI][prevJ]
                 if (prevPiece in (1, 2) and i==0) or (prevPiece==3 and i<2):
                     renewState(True, 0, 1, i, j, prevI, prevJ)
-                elif prevPiece<8 and (prevI<3 or i<3):
+                elif prevPiece<7 and (prevI<3 or i<3):
                     nextI, nextJ = i, j
                     dialog[0], dialog[1] = mouseX, mouseY
                 else:
@@ -139,11 +139,12 @@ def renewState(renew, dr=None, pr=None, ni=None, nj=None, pi=None, pj=None):
     if renew:
         state = state.child(dr, pr, ni, nj, pi, pj)
         if not any(bool(state.child(*move).legal_moves()) for move in state.legal_moves()):
-            result = 1
+            result = 0
         else:
-            state = state.child(*state.negamax()[1])
-            legalMoves = state.legal_moves()
             if not legalMoves:
-                result = 0
+                result = 1
+            else:
+                state = state.child(*state.negamax()[1])
+                legalMoves = state.legal_moves()
     drop = nextI = nextJ = prevI = prevJ = dialog[0] = dialog[1] = None
     targets = [[False]*9 for i in range(9)]
