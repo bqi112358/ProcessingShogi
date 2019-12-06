@@ -2,15 +2,18 @@ from state import State
 
 bPieces, wPieces = [None], [None]
 def setup():
+    global particles
     size(640, 480)
     for i in range(1, 16):
         bPieces.append(loadImage('b{}.png'.format(i)))
         wPieces.append(loadImage('w{}.png'.format(i)))
     textSize(20)
     textAlign(CENTER, CENTER)
+    particles = [[random(width), random(height)] for i in range(1000)]
     
 def draw():
     background(0)
+    drawParticles()
     drawBoard()
     drawPieces()
     drawHands()
@@ -24,7 +27,18 @@ def draw():
         text(['YOU WIN', 'YOU LOSE'][result], width/2, height/2)
         noLoop()
         
-
+        
+particles = []
+def drawParticles():
+    for i, (x, y) in enumerate(particles):
+        particles[i][0] += random(-1, 1)
+        particles[i][1] += random(3)
+        if y > 1000:
+            particles[i][1] = 0
+        strokeWeight(random(5))
+        stroke(512*abs(.5-x/width), 512*abs(.5-y/height), 256*i/len(particles))
+        point(x, y)
+        
 def drawBoard():
     noStroke()
     fill(255, 192, 64)
