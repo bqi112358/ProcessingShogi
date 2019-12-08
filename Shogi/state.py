@@ -15,7 +15,7 @@ class State:
         self.board = board
         self.hand = hand
 
-    def child(self, drop, prom, ni, nj, pi=0, pj=0):
+    def child(self, drop=0, prom=0, ni=0, nj=0, pi=0, pj=0):
         ni = 8 - ni
         nj = 8 - nj
         board = [[-piece for piece in rank[::-1]] for rank in self.board[::-1]]
@@ -73,9 +73,8 @@ class State:
                                 ni -= 1
                 elif piece == 3:
                     ni = i - 2
-                    for dj in -1, 1:
-                        nj = j + dj
-                        if 0 < j < 8:
+                    for nj in j-1, j+1:
+                        if 0 <= nj <= 8:
                             n_piece = self.board[ni][nj]
                             if n_piece <= 0:
                                 if n_piece == -14:
@@ -197,21 +196,27 @@ class State:
                                 moves.append((piece, 0, i, j))
         return moves
     
-    def negamax(self, depth=4, a=-10000, b=10000):
-        if not depth:
-            return (sum(map(sum, self.board))+sum(self.hand)), None
-        lm = self.legal_moves()
-        if not lm:
-            return 10000, None
-        bm = random.choice(lm)
-        for move in lm:
-            score = -self.child(*move).negamax(depth-1, -b, -a)[0]
+    def negamax_root(self, depth=3, a=-10000):
+        for move in self.legal_moves():
+            score = -self.child(*move).negamax(depth-1, -10000, -a)
             if score > a:
                 a = score
-                bm = move
+                bestmove = move
+            if score == 10000:
+                break
+        return a, bestmove
+    
+    def negamax(self, depth, a, b):
+        lm = self.legal_moves()
+        if not lm:
+            return 10000
+        if not depth:
+            return (sum(map(sum, self.board))+sum(self.hand)+len(lm))
+        for move in lm:
+            a = max(a, -self.child(*move).negamax(depth-1, -b, -a))
             if a >= b:
                 break
-        return a, bm
+        return a
     
 if __name__ == '__main__':
     pass

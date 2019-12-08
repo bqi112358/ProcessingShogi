@@ -3,17 +3,17 @@ from state import State
 bPieces, wPieces = [None], [None]
 def setup():
     global particles
-    size(640, 480)
+    size(1280, 960)
     for i in range(1, 16):
         bPieces.append(loadImage('b{}.png'.format(i)))
         wPieces.append(loadImage('w{}.png'.format(i)))
-    textSize(20)
-    textAlign(CENTER, CENTER)
     particles = [[random(width), random(height)] for i in range(1024)]
     
 def draw():
     background(0)
     drawParticles()
+    drawLevel()
+    scale(2)
     drawBoard()
     drawPieces()
     drawHands()
@@ -22,6 +22,7 @@ def draw():
     if dialog[0]:
         drawDialog()
     if result != None:
+        scale(0.5)
         drawResult()
         
 particles = []
@@ -34,6 +35,12 @@ def drawParticles():
         strokeWeight(random(3))
         stroke(512*abs(.5-x/width), 512*abs(.5-y/height), i/4)
         point(x, y)
+        
+def drawLevel():
+    fill(255)
+    textSize(40)
+    textAlign(CENTER)
+    text('CPU LEVEL:{}'.format(level), width/2, 40)
         
 def drawBoard():
     noStroke()
@@ -62,45 +69,15 @@ def drawPieces():
                 
 def drawHands():
     fill(0, 64, 128)
+    textSize(20)
+    textAlign(LEFT)
     for piece in range(1, 8):
         if state.hand.count(piece) != 0:
             image(bPieces[piece], 550, 80+piece*50)
-            text('x{}'.format(state.hand.count(piece)), 615, 105+piece*50)
+            text('x{}'.format(state.hand.count(piece)), 600, 105+piece*50)
         if state.hand.count(-piece) != 0:
             image(wPieces[piece], 10, 350-piece*50)
-            text('x{}'.format(state.hand.count(-piece)), 75, 375-piece*50)
-            
-def mousePressed():
-    global drop, nextI, nextJ, prevI, prevJ
-    i = (mouseY-33) // 46
-    j = (mouseX-131) // 42
-    if dialog[0]:
-        renewState(0<mouseX-dialog[0]<84 and 0<mouseY-dialog[1]<46, 0, mouseX-dialog[0]<42, nextI, nextJ, prevI, prevJ)
-    elif drop or prevI != None:
-        if 0<=i<=8 and 0<=j<=8 and targets[i][j]:
-            if drop:
-                renewState(True, drop, 0, i, j)
-            else:
-                prevPiece = state.board[prevI][prevJ]
-                if (prevPiece in (1, 2) and i==0) or (prevPiece==3 and i<2):
-                    renewState(True, 0, 1, i, j, prevI, prevJ)
-                elif prevPiece<7 and (prevI<3 or i<3):
-                    nextI, nextJ = i, j
-                    dialog[0], dialog[1] = mouseX, mouseY
-                else:
-                    renewState(True, 0, 0, i, j, prevI, prevJ)
-        else:
-            renewState(False)
-    elif 0<=i<=8 and 0<=j<=8 and state.board[i][j] > 0:
-        for move in legalMoves:
-            if len(move) > 4 and move[4]==i and move[5]==j:
-                targets[move[2]][move[3]] = True
-        prevI, prevJ = i, j
-    elif mouseX>540 and (mouseY-80)//50 in state.hand:
-        drop = (mouseY-80) // 50
-        for move in legalMoves:
-            if move[0]:
-                targets[move[2]][move[3]] = True
+            text('x{}'.format(state.hand.count(-piece)), 50, 375-piece*50)
             
 targets = [[False]*9 for i in range(9)]
 def drawTargets():
@@ -121,6 +98,7 @@ def drawDialog():
     image(bPieces[state.board[prevI][prevJ]+7], dialog[0], dialog[1])
     image(bPieces[state.board[prevI][prevJ]], dialog[0]+42, dialog[1])
     
+level = 1
 state = State()
 legalMoves = state.legal_moves()
 drop = nextI = nextJ = prevI = prevJ = result = None
@@ -129,18 +107,58 @@ def renewState(renew, dr=None, pr=None, ni=None, nj=None, pi=None, pj=None):
     if renew:
         state = state.child(dr, pr, ni, nj, pi, pj)
         if not any(bool(state.child(*move).legal_moves()) for move in state.legal_moves()):
+            state = state.child()
             result = 0
         else:
-            if not legalMoves:
+            state = state.child(*state.negamax_root(level)[1])
+            legalMoves = state.legal_moves()
+            if not any(bool(state.child(*move).legal_moves()) for move in legalMoves):
                 result = 1
-            else:
-                state = state.child(*state.negamax()[1])
-                legalMoves = state.legal_moves()
     drop = nextI = nextJ = prevI = prevJ = dialog[0] = dialog[1] = None
     targets = [[False]*9 for i in range(9)]
     
 def drawResult():
-    fill(255, 255, 0)
+    fill(255*(1-result), 0, 255*result)
     textSize(100)
-    text(['YOU WIN', 'YOU LOSE'][result], width/2, height/2)
+    textAlign(CENTER)
+    text(['YOU WIN', 'YOU LOSEwwwwwwwww'][result], width/2, height/2)
     noLoop()
+    
+def mousePressed():
+    global drop, nextI, nextJ, prevI, prevJ
+    i = (mouseY/2-33) // 46
+    j = (mouseX/2-131) // 42
+    if dialog[0]:
+        renewState(0<mouseX/2-dialog[0]<84 and 0<mouseY/2-dialog[1]<46, 0, mouseX/2-dialog[0]<42, nextI, nextJ, prevI, prevJ)
+    elif drop or prevI != None:
+        if 0<=i<=8 and 0<=j<=8 and targets[i][j]:
+            if drop:
+                renewState(True, drop, 0, i, j)
+            else:
+                prevPiece = state.board[prevI][prevJ]
+                if (prevPiece in (1, 2) and i==0) or (prevPiece==3 and i<2):
+                    renewState(True, 0, 1, i, j, prevI, prevJ)
+                elif prevPiece<7 and (prevI<3 or i<3):
+                    nextI, nextJ = i, j
+                    dialog[0], dialog[1] = mouseX/2, mouseY/2
+                else:
+                    renewState(True, 0, 0, i, j, prevI, prevJ)
+        else:
+            renewState(False)
+    elif 0<=i<=8 and 0<=j<=8 and state.board[i][j] > 0:
+        for move in legalMoves:
+            if len(move) > 4 and move[4]==i and move[5]==j:
+                targets[move[2]][move[3]] = True
+        prevI, prevJ = i, j
+    elif mouseX/2>540 and (mouseY/2-80)//50 in state.hand:
+        drop = (mouseY/2-80) // 50
+        for move in legalMoves:
+            if move[0]:
+                targets[move[2]][move[3]] = True
+                
+def keyPressed():
+    global level
+    if keyCode == UP:
+        level = min(3, level+1)
+    elif keyCode == DOWN:
+        level = max(1, level-1)
