@@ -1,5 +1,9 @@
 # ProcessingShogi
-・Processing3, Python modeで遊べる将棋かもしれない
+・Processing3で遊べる将棋かもしれない
 
+・ポンコツAI付き!!!
 
-・ポンコツAI付き
+## 更新履歴とか
+### 2019.12.08
+  ・バグ修正
+  ・上下キーで3段階でレベル変更可能に
