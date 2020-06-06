@@ -11,14 +11,14 @@ f = -10
 def setup():
     global particles, bPieces, wPieces
     size(1280, 960)
-    frameRate(10)
+    frameRate(30)
     particles = [[random(width), random(height)] for i in range(255)]
     bPieces = [loadImage('b{}.png'.format(i)) for i in range(16)]
     wPieces = [loadImage('w{}.png'.format(i)) for i in range(16)]
     
 def draw():
     background(0)
-    #drawParticles()
+    drawParticles()
     drawLevel()
     scale(2)
     drawBoard()
