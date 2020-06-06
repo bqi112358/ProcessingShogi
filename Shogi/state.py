@@ -1,222 +1,113 @@
 import random
 
 class State:
-    startpos = [[-2, -3, -4, -7,-14, -7, -4, -3, -2],
-                [ 0, -6,  0,  0,  0,  0,  0, -5,  0],
-                [-1, -1, -1, -1, -1, -1, -1, -1, -1],
-                [ 0,  0,  0,  0,  0,  0,  0,  0,  0],
-                [ 0,  0,  0,  0,  0,  0,  0,  0,  0],
-                [ 0,  0,  0,  0,  0,  0,  0,  0,  0],
-                [ 1,  1,  1,  1,  1,  1,  1,  1,  1],
-                [ 0,  5,  0,  0,  0,  0,  0,  6,  0],
-                [ 2,  3,  4,  7, 14,  7,  4,  3,  2]]
-    
-    def __init__(self, board=startpos, hand=[]):
-        self.board = board
-        self.hand = hand
+    def __init__(self):
+        startpos = [-2, -3, -4, -5, -8, -5, -4, -3, -2,
+                     0, -7,  0,  0,  0,  0,  0, -6,  0,
+                    -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                     0,  0,  0,  0,  0,  0,  0,  0,  0,
+                     0,  0,  0,  0,  0,  0,  0,  0,  0,
+                     0,  0,  0,  0,  0,  0,  0,  0,  0,
+                     1,  1,  1,  1,  1,  1,  1,  1,  1,
+                     0,  6,  0,  0,  0,  0,  0,  7,  0,
+                     2,  3,  4,  5,  8,  5,  4,  3,  2]
+        self.weights = 0, 2, 4, 6, 8, 10, 12, 14, 100, -100, -14, -12, -10, -8, -6, -4, -2, 0
+        self.major = dict((piece, [None]*81) for piece in (2, 6, 7, 14, 15))
+        self.minor = dict((piece, [None]*81) for piece in (1, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15))
+        ds = ((1, -1, 8), (1, 1, 10), (-1, -1, -10), (-1, 1, -8), (-1, 0, -9), (0, -1, -1), (0, 1, 1), (1, 0, 9))
+        for p in range(81):
+            (i, j), raid = divmod(p, 9), p<27
+            ctrl = [[(n, n<27, n%9) for n in range(p-10, p-10*(1+min(i,   j)), -10)],
+                    [(n, n<27, n%9) for n in range(p- 8, p- 8*(1+min(i, 8-j)), - 8)],
+                    [(n, raid, n%9) for n in range(p+10, p+10*(9-max(i,   j)),  10)],
+                    [(n, raid, n%9) for n in range(p+ 8, p+ 8*(9-max(i, 8-j)),   8)]]
+            self.major[ 6][p] = [[(n, (6, 14)[prom], nj) for n, prom, nj in ns] for ns in ctrl]
+            self.major[14][p] = [[(n,     14       , nj) for n, prom, nj in ns] for ns in ctrl]
+            ctrl = [[(n, n<27,   j) for n in range(p-9,    -1, -9)],
+                    [(n, raid,   j) for n in range(p+9,    81,  9)],
+                    [(n, raid, n%9) for n in range(p-1, p-j-1, -1)],
+                    [(n, raid, n%9) for n in range(p+1, p-j+9,  1)]]
+            self.major[ 2][p] = [[(n, (2,  9)[prom], nj) for n, prom, nj in ctrl[0]]]
+            self.major[ 7][p] = [[(n, (7, 15)[prom], nj) for n, prom, nj in ns] for ns in ctrl]
+            self.major[15][p] = [[(n,     15       , nj) for n, prom, nj in ns] for ns in ctrl]
+            self.minor[ 1][p] = [[p-9, (1, 9)[i<=3], j, i<=3]] if i else []
+            self.minor[ 3][p] = [[p+dj-18, (3, 11)[i<=4], j+dj, None] for dj in (-1, 1) if 0<=j+dj<=8] if i>=2 else []
+            c = [(p+d, j+dj, 0<=i+di<=8 and 0<=j+dj<=8) for di, dj, d in ds]
+            for piece, ctrl in (4,c[:5]), (5,c[2:]), (8,c), (9,c[2:]), (10,c[2:]), (11,c[2:]), (12,c[2:]), (14,c[4:]), (15,c[:4]):
+                self.minor[piece][p] = [[n, piece, nj, None] for n, nj, on_board in ctrl if on_board]
+        self.board = startpos
+        self.hand = [0] * 18
+        self.nonp = [False] * 18
 
-    def child(self, drop=0, prom=0, ni=0, nj=0, pi=0, pj=0):
-        ni = 8 - ni
-        nj = 8 - nj
-        board = [[-piece for piece in rank[::-1]] for rank in self.board[::-1]]
-        hand = [-piece for piece in self.hand]
-        if drop:
-            drop *= - 1
-            board[ni][nj] = drop
-            hand.remove(drop)
-        else:
-            pi = 8 - pi
-            pj = 8 - pj
-            piece = board[ni][nj]
-            if 7 < piece < 14:
-                hand.append(-piece+7)
-            elif piece:
-                hand.append(-piece)
-            if prom:
-                board[ni][nj] = board[pi][pj] - 7
+    def legal_moves(self, board, hand, nonp):
+        for p, p0 in enumerate(board):
+            if not p0:
+                for n1 in 7, 6, 5, 4:
+                    if hand[n1]:
+                        yield p, n1
+                if p >= 9:
+                    if p >= 18:
+                        if hand[3]:
+                            yield p, 3
+                    if hand[2]:
+                        yield p, 2
+                    if nonp[p%9] and hand[1]:
+                        yield p, 1
             else:
-                board[ni][nj] = board[pi][pj]
-            board[pi][pj] = 0
-        return State(board, hand)
+                if p0 in self.major:
+                    for ns in self.major[p0][p]:
+                        for n, n1, nj in ns:
+                            n0 = -board[n]
+                            if n0 >= 0:
+                                yield n, n1, nj, n0, p
+                            if n0:
+                                break
+                if p0 in self.minor:
+                    for n, n1, nj, pp in self.minor[p0][p]:
+                        n0 = -board[n]
+                        if n0 >= 0:
+                            yield n, n1, nj, n0, p, pp
 
-    def legal_moves(self):
-        moves = []
-        for i in range(9):
-            for j in range(9):
-                piece = self.board[i][j]
-                if piece == 1:
-                    ni = i - 1
-                    n_piece = self.board[ni][j]
-                    if n_piece == -14:
-                        return
-                    if n_piece <= 0:
-                        if i < 4:
-                            moves.append((0, 1, ni, j, i, j))
-                        else:
-                            moves.append((0, 0, ni, j, i, j))
-                elif piece == 2:
-                    ni = i - 1
-                    while ni >= 0:
-                        n_piece = self.board[ni][j]
-                        if n_piece == -14:
-                            return
-                        if n_piece > 0:
-                            break
-                        else:
-                            if ni < 3:
-                                moves.append((0, 1, ni, j, i, j))
-                            if ni > 1:
-                                moves.append((0, 0, ni, j, i, j))
-                            if n_piece:
-                                break
-                            else:
-                                ni -= 1
-                elif piece == 3:
-                    ni = i - 2
-                    for nj in j-1, j+1:
-                        if 0 <= nj <= 8:
-                            n_piece = self.board[ni][nj]
-                            if n_piece <= 0:
-                                if n_piece == -14:
-                                    return
-                                if i < 5:
-                                    moves.append((0, 1, ni, nj, i, j))
-                                if i > 3:
-                                    moves.append((0, 0, ni, nj, i, j))
-                elif piece == 4:
-                    for di in -1, 1:
-                        for dj in -1, 0, 1:
-                            ni, nj = i + di, j + dj
-                            if 0 <= ni <= 8 and 0 <= nj <= 8:
-                                n_piece = self.board[ni][nj]
-                                if n_piece <= 0 and (di == -1 or dj):
-                                    if n_piece == -14:
-                                        return
-                                    if i < 3 or ni < 3:
-                                        moves.append((0, 1, ni, nj, i, j))
-                                    moves.append((0, 0, ni, nj, i, j))
-                elif 6 < piece < 12:
-                    for di in -1, 0, 1:
-                        for dj in -1, 0, 1:
-                            ni, nj = i + di, j + dj
-                            if 0 <= ni <= 8 and 0 <= nj <= 8:
-                                n_piece = self.board[ni][nj]
-                                if n_piece <= 0 and (di == -1 or abs(di+dj) == 1):
-                                    if n_piece == -14:
-                                        return
-                                    moves.append((0, 0, ni, nj, i, j))
-                elif piece==5 or piece==12:
-                    for di in -1, 1:
-                        for dj in -1, 1:
-                            ni, nj = i + di, j + dj
-                            while 0 <= ni <= 8 and 0 <= nj <= 8:
-                                n_piece = self.board[ni][nj]
-                                if n_piece == -14:
-                                    return
-                                if n_piece > 0:
-                                    break
-                                else:
-                                    if piece == 5 and (i < 3 or ni < 3):
-                                        moves.append((0, 1, ni, nj, i, j))
-                                    else:
-                                        moves.append((0, 0, ni, nj, i, j))
-                                    if n_piece:
-                                        break
-                                    else:
-                                        ni += di
-                                        nj += dj
-                elif piece==6 or piece==13:
-                    for di in -1, 1:
-                        ni = i + di
-                        while 0 <= ni <= 8:
-                            n_piece = self.board[ni][j]
-                            if n_piece == -14:
-                                return
-                            if n_piece > 0:
-                                break
-                            else:
-                                if piece == 6 and (i < 3 or ni < 3):
-                                    moves.append((0, 1, ni, j, i, j))
-                                else:
-                                    moves.append((0, 0, ni, j, i, j))
-                                if n_piece:
-                                    break
-                                else:
-                                    ni += di
-                    for dj in -1, 1:
-                        nj = j + dj
-                        while 0 <= nj <= 8:
-                            n_piece = self.board[i][nj]
-                            if n_piece == -14:
-                                return
-                            if n_piece > 0:
-                                break
-                            else:
-                                if piece == 6 and i < 3:
-                                    moves.append((0, 1, i, nj, i, j))
-                                else:
-                                    moves.append((0, 0, i, nj, i, j))
-                                if n_piece:
-                                    break
-                                else:
-                                    nj += dj
-                if piece > 11:
-                    for di in -1, 0, 1:
-                        for dj in -1, 0, 1:
-                            ni, nj = i + di, j + dj
-                            if 0 <= ni <= 8 and 0 <= nj <= 8:
-                                n_piece = self.board[ni][nj]
-                                if n_piece <= 0 and (ni or nj):
-                                    if n_piece == -14:
-                                        return
-                                    moves.append((0, 0, ni, nj, i, j))
-        for piece in set(self.hand):
-            if piece == 1:
-                droppable = set(range(9))
-                for j in range(9):
-                    for rank in self.board:
-                        if rank[j] == 1:
-                            droppable.remove(j)
-                            break
-                for i in range(1, 9):
-                    for j in droppable:
-                        if not self.board[i][j]:
-                            moves.append((1, 0, i, j))
-            elif piece > 1:
-                for i in range(9):
-                    for j in range(9):
-                        if not self.board[i][j]:
-                            if piece == 2:
-                                if i > 0:
-                                    moves.append((2, 0, i, j))
-                            elif piece == 3:
-                                if i > 1:
-                                    moves.append((3, 0, i, j))
-                            else:
-                                moves.append((piece, 0, i, j))
-        return moves
+    def do(self, board, hand, nonp, n, n1, nj=None, n0=None, p=None, pp=None):
+        board, hand, nonp = [-piece for piece in board[::-1]], hand[::-1], nonp[::-1]
+        board[80-n] = -n1
+        if nj == None:
+            hand[-1-n1] -= 1
+            if n1 == 1:
+                nonp[-1-n%9] = False
+        else:
+            board[80-p] = 0
+            if n0 >= 9:
+                hand[7-n0] += 1
+            elif n0:
+                hand[-1-n0] += 1
+                if n0 == 1:
+                    nonp[8-nj] = True
+            if pp:
+                nonp[-1-nj] = True
+        return board, hand, nonp
+
+    def act(self, move):
+        self.board, self.hand, self.nonp = self.do(self.board, self.hand, self.nonp, *move)
     
-    def negamax_root(self, depth=3, a=-10000):
-        for move in self.legal_moves():
-            score = -self.child(*move).negamax(depth-1, -10000, -a)
-            if score > a:
-                a = score
-                bestmove = move
-            if score == 10000:
-                break
-        return a, bestmove
-    
-    def negamax(self, depth, a, b):
-        lm = self.legal_moves()
-        if not lm:
-            return 10000
+    def negamax(self, depth, alpha, beta, board, hand, nonp):
+        if hand[9]:
+            return -1000
         if not depth:
-            return (sum(map(sum, self.board))+sum(self.hand)+len(lm))
-        for move in lm:
-            a = max(a, -self.child(*move).negamax(depth-1, -b, -a))
-            if a >= b:
-                break
-        return a
-    
-if __name__ == '__main__':
-    pass
+            return sum(board) + sum(w*p for w, p in zip(self.weights, hand))
+        for move in list(self.legal_moves(board, hand, nonp)):
+            alpha = max(alpha, -self.negamax(depth-1, -beta, -alpha, *self.do(board, hand, nonp, *move)))
+            if alpha >= beta:
+                return alpha
+        return alpha
+        
+    def search(self, depth=1):
+        alpha, bestmove = -1000, None
+        moves = list(self.legal_moves(self.board, self.hand, self.nonp))
+        random.shuffle(moves)
+        for move in moves:
+            score = -self.negamax(depth, -1000, -alpha, *self.do(self.board, self.hand, self.nonp, *move))
+            if score > alpha:
+                alpha = score
+                bestmove = move
+        return alpha, bestmove
