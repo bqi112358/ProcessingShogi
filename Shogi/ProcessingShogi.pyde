@@ -123,11 +123,12 @@ def renewState(move=None):
 def cpu_move():
     global state, result, legalMoves, f
     state.board, state.hand = [-piece for piece in state.board[::-1]], state.hand[::-1]
-    if state.search()[0] == -1000:
+    score, bestmove = state.search(LV)
+    if score == -1000:
         state.board, state.hand = [-piece for piece in state.board[::-1]], state.hand[::-1]
         result = 0
     else:
-        state.act(state.search(LV)[1])
+        state.act(bestmove)
         legalMoves = list(state.legal_moves(state.board, state.hand, state.nonp))
         if state.search()[0] == -1000:
             result = 1
